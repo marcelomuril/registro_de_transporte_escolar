@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Transporte Escolar</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      background: #f4f7f9;
+      color: #333;
+    }
+    header {
+      background: #0066cc;
+      color: white;
+      text-align: center;
+      padding: 15px 0;
+      font-size: 1.5em;
+      font-weight: bold;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    main {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .section-title {
+      font-size: 1.2em;
+      margin: 20px 0 10px;
+      text-align: center;
+    }
+    .rota-btn {
+      width: 90%;
+      padding: 20px;
+      margin: 10px 0;
+      border: none;
+      border-radius: 12px;
+      font-size: 1.1em;
+      font-weight: bold;
+      color: #fff;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    .rota-btn:hover {
+      transform: scale(1.03);
+      box-shadow: 0 6px 14px rgba(0,0,0,0.15);
+    }
+    .rota-centro {
+      background: linear-gradient(135deg, #4da3ff, #1e90ff);
+    }
+    .rota-verde {
+      background: linear-gradient(135deg, #5cd67a, #32b864);
+    }
+    .rota-flores {
+      background: linear-gradient(135deg, #ffb366, #ff944d);
+    }
+    .pendente {
+      opacity: 0.9;
+      border: 2px dashed rgba(255,255,255,0.5);
+    }
+    .hidden { display: none; }
+    .aluno-list {
+      width: 90%;
+      background: #fff;
+      border-radius: 12px;
+      padding: 15px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .aluno-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid #eee;
+    }
+    .aluno-item:last-child {
+      border-bottom: none;
+    }
+    button.primary {
+      background: #0066cc;
+      color: #fff;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      margin-top: 20px;
+      font-size: 1em;
+      cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+    }
+    button.primary:hover {
+      background: #005bb5;
+    }
+    button.secondary {
+      background: #ccc;
+      color: #333;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 8px;
+      margin-top: 10px;
+      font-size: 0.95em;
+      cursor: pointer;
+    }
+    button.secondary:hover {
+      background: #bbb;
+    }
+    #reset-btn {
+      background: #ff6666;
+      color: #fff;
+      margin-top: 25px;
+      font-size: 0.9em;
+    }
+    #reset-btn:hover {
+      background: #e05555;
+    }
+  </style>
+</head>
+<body>
+  <header>Transporte Escolar</header>
+  <main id="app">
+    <div id="tela-inicial">
+      <h2 class="section-title">Selecione uma rota</h2>
+      <button class="rota-btn rota-centro" onclick="iniciarViagem('Centro')">Rota 1 – Centro</button>
+      <button class="rota-btn rota-verde" onclick="iniciarViagem('Bairro Verde')">Rota 2 – Bairro Verde</button>
+      <button class="rota-btn rota-flores" onclick="iniciarViagem('Jardim das Flores')">Rota 3 – Jardim das Flores</button>
+      <div id="pendentes"></div>
+      <button id="reset-btn" onclick="resetarDados()">🗑️ Resetar dados</button>
+    </div>
+
+    <div id="tela-viagem" class="hidden">
+      <h2 class="section-title" id="titulo-viagem"></h2>
+      <div class="aluno-list" id="lista-alunos"></div>
+      <button class="primary" onclick="encerrarViagem()">Encerrar Viagem</button>
+      <button class="secondary" onclick="voltarInicio()">⬅️ Voltar à Tela Inicial</button>
+    </div>
+  </main>
+
+  <script>
+    const rotas = {
+      'Centro': ['Ana Souza', 'Bruno Lima', 'Carla Mendes', 'Daniel Rocha', 'Eduardo Alves', 'Fernanda Dias', 'Gabriel Santos', 'Helena Cruz', 'Igor Ferreira', 'Juliana Martins'],
+      'Bairro Verde': ['Lucas Pires', 'Marina Costa', 'Nicolas Araujo', 'Olivia Teixeira', 'Paulo Reis', 'Rafaela Gomes', 'Samuel Moura', 'Tatiane Lopes', 'Ubirajara Nunes', 'Viviane Melo'],
+      'Jardim das Flores': ['William Prado', 'Xavier Luz', 'Yasmin Duarte', 'Zuleica Ramos', 'Arthur Campos', 'Beatriz Leal', 'Caio Tavares', 'Diana Paes', 'Enzo Faria', 'Fabiana Torres']
+    };
+
+    let pendentesRetorno = [];
+    let idaEmbarcados = {}; // salva quem embarcou na ida por rota
+    let modo = 'ida';
+    let rotaAtual = '';
+    let alunosAtuais = [];
+
+    function iniciarViagem(rota) {
+      rotaAtual = rota;
+      modo = pendentesRetorno.includes(rota) ? 'retorno' : 'ida';
+      document.getElementById('tela-inicial').classList.add('hidden');
+      document.getElementById('tela-viagem').classList.remove('hidden');
+      document.getElementById('titulo-viagem').textContent = `${modo === 'ida' ? 'Ida' : 'Retorno'} – Rota ${rota}`;
+      carregarAlunos();
+    }
+
+    function carregarAlunos() {
+      const lista = document.getElementById('lista-alunos');
+      lista.innerHTML = '';
+
+      if (modo === 'retorno' && idaEmbarcados[rotaAtual]) {
+        alunosAtuais = idaEmbarcados[rotaAtual].map(nome => ({ nome, embarcou: false }));
+      } else {
+        alunosAtuais = rotas[rotaAtual].map(nome => ({ nome, embarcou: false }));
+      }
+
+      alunosAtuais.forEach((aluno, i) => {
+        const item = document.createElement('div');
+        item.className = 'aluno-item';
+        item.innerHTML = `<span>${i + 1}. ${aluno.nome}</span><input type='checkbox' onchange='alunosAtuais[${i}].embarcou=this.checked'>`;
+        lista.appendChild(item);
+      });
+    }
+
+    function encerrarViagem() {
+      if (modo === 'ida') {
+        const embarcados = alunosAtuais.filter(a => a.embarcou).map(a => a.nome);
+        idaEmbarcados[rotaAtual] = embarcados;
+        pendentesRetorno.push(rotaAtual);
+      } else {
+        const faltantes = alunosAtuais.filter(a => !a.embarcou).map(a => a.nome);
+        if (faltantes.length > 0) {
+          alert(`⚠️ Atenção: ${faltantes.length} aluno(s) que vieram na ida não embarcaram no retorno:\n- ${faltantes.join('\n- ')}`);
+        }
+        pendentesRetorno = pendentesRetorno.filter(r => r !== rotaAtual);
+        delete idaEmbarcados[rotaAtual];
+      }
+      atualizarPendentes();
+      document.getElementById('tela-inicial').classList.remove('hidden');
+      document.getElementById('tela-viagem').classList.add('hidden');
+    }
+
+    function voltarInicio() {
+      document.getElementById('tela-inicial').classList.remove('hidden');
+      document.getElementById('tela-viagem').classList.add('hidden');
+    }
+
+    function resetarDados() {
+      if (confirm('Tem certeza que deseja resetar todos os dados?')) {
+        pendentesRetorno = [];
+        idaEmbarcados = {};
+        atualizarPendentes();
+        alert('Todos os dados foram resetados com sucesso.');
+      }
+    }
+
+    function atualizarPendentes() {
+      const pendDiv = document.getElementById('pendentes');
+      pendDiv.innerHTML = '';
+      if (pendentesRetorno.length > 0) {
+        const title = document.createElement('h3');
+        title.className = 'section-title';
+        title.textContent = 'Pendentes de retorno:';
+        pendDiv.appendChild(title);
+        pendentesRetorno.forEach(r => {
+          const btn = document.createElement('button');
+          btn.className = `rota-btn pendente ${r==='Centro'?'rota-centro':r==='Bairro Verde'?'rota-verde':'rota-flores'}`;
+          btn.textContent = `${r} – Iniciar Retorno`;
+          btn.onclick = () => iniciarViagem(r);
+          pendDiv.appendChild(btn);
+        });
+      }
+    }
+  </script>
+</body>
+</html>
